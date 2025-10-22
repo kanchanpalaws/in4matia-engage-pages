@@ -1,0 +1,92 @@
+<!-- engage.html -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Answer — Inmatia</title>
+<style>
+  body { font-family:Helvetica, Arial, sans-serif; background:#f3f7fb; color:#102a43; padding:20px; }
+  .card { max-width:720px; margin:24px auto; background:#fff; border-radius:8px; padding:22px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+  label { display:block; margin:8px 0 4px; font-weight:600; }
+  input[type="text"], textarea { width:100%; padding:10px; border-radius:6px; border:1px solid #e2e8f0; }
+  button { background:#0ea5e9; color:#fff; padding:10px 14px; border-radius:6px; border:none; cursor:pointer; }
+  .success { text-align:center; padding:40px; font-size:20px; color:#065f46; }
+</style>
+</head>
+<body>
+  <div class="card" id="mainCard">
+    <h2>Answer the Question</h2>
+    <form id="engageForm">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="text" readonly />
+
+      <label for="question">Question</label>
+      <input id="question" name="question" type="text" readonly />
+
+      <label for="answer">Your Answer</label>
+      <textarea id="answer" name="answer" rows="6" placeholder="Write your answer here..." required></textarea>
+
+      <div style="margin-top:12px;">
+        <button type="submit">Submit Answer</button>
+      </div>
+    </form>
+    <div id="result" style="display:none;" class="success"></div>
+  </div>
+
+<script>
+  // IMPORTANT: set to your Supabase Edge Function submit URL
+  const EDGE_FUNCTION_URL = "https://gusvgcjyacvyyquoyoty.supabase.co/functions/v1/submit-engagement";
+
+  function readQueryParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      email: params.get('email') || '',
+      uid: params.get('uid') || '',
+      question: params.get('question') || 'No question provided'
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const q = readQueryParams();
+    document.getElementById('email').value = q.email;
+    document.getElementById('question').value = q.question;
+
+    const form = document.getElementById('engageForm');
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const email = document.getElementById('email').value;
+      const uid = q.uid;
+      const question = document.getElementById('question').value;
+      const answer = document.getElementById('answer').value.trim();
+      if (!answer) { alert("Please enter your answer."); return; }
+
+      try {
+        const payload = { email, uid, question, answer };
+        const res = await fetch(EDGE_FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          // show the confirmation page content (user requested text)
+          document.getElementById('mainCard').innerHTML = `
+            <div class="success">
+              <h3>Thanks for Submitting the Answer</h3>
+              <p>Your Answer is correct.</p>
+            </div>
+          `;
+        } else {
+          alert("Submission failed. Please try again.");
+          console.error("Edge function returned:", json);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("An error occurred. Please try again later.");
+      }
+    });
+  });
+</script>
+</body>
+</html>
